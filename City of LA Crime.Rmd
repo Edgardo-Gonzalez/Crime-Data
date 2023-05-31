@@ -1,0 +1,83 @@
+---
+title: "City of Los Angeles - 2020 to Present"
+author: "Ed Gonzalez"
+output: pdf_document
+---
+```{r include = FALSE, warning= FALSE, message=FALSE}
+library(readr)
+library(lubridate)
+library(dplyr)
+library(tidyverse)
+```
+```{r warning= FALSE, message=FALSE}
+la_crime <- read_csv("/Users/ed/Downloads/Crime_Data_from_2020_to_Present.csv")
+
+la_crime$Year <- year(mdy_hms(la_crime$'DATE OCC'))
+
+names(la_crime)[names(la_crime) == "Date Rptd"] <- "Date Reported"
+names(la_crime)[names(la_crime) == "DATE OCC"] <- "Date Occurred"
+names(la_crime)[names(la_crime) == "TIME OCC"] <- "Time Occurred"
+names(la_crime)[names(la_crime) == "AREA"] <- "Area"
+names(la_crime)[names(la_crime) == "LAT"] <- "Latitude"
+names(la_crime)[names(la_crime) == "LON"] <- "Longitude"
+names(la_crime)[names(la_crime) == "Crm Cd Desc"] <- "Crime"
+```
+
+```{r}
+la_crime <- la_crime %>%
+  mutate(category = ifelse(
+    Crime %in% c("BATTERY - SIMPLE ASSAULT", "RAPE, FORCIBLE", "ARSON","INTIMATE PARTNER - SIMPLE ASSAULT","ROBBERY","ASSAULT WITH DEADLY WEAPON, AGGRAVATED ASSAULT","BURGLARY", "INTIMATE PARTNER - AGGRAVATED ASSAULT","BATTERY WITH SEXUAL CONTACT", "BATTERY POLICE (SIMPLE)","SEX,UNLAWFUL(INC MUTUAL CONSENT, PENETRATION W/ FRGN OBJ", "OTHER ASSAULT", "SEXUAL PENETRATION W/FOREIGN OBJECT", "SHOTS FIRED AT INHABITED DWELLING", "KIDNAPPING - GRAND ATTEMPT", "DISCHARGE FIREARMS/SHOTS FIRED",
+"KIDNAPPING","SODOMY/SEXUAL CONTACT B/W PENIS OF ONE PERS TO ANUS OTH", "CHILD ABUSE (PHYSICAL) - SIMPLE ASSAULT","RAPE, ATTEMPTED", "SHOTS FIRED AT MOVING VEHICLE, TRAIN OR AIRCRAFT", "CRIMINAL HOMICIDE", "ASSAULT WITH DEADLY WEAPON ON POLICE OFFICER", "HUMAN TRAFFICKING - COMMERCIAL SEX ACTS", "BATTERY ON A FIREFIGHTER", "CHILD ABUSE (PHYSICAL) - AGGRAVATED ASSAULT", "CRUELTY TO ANIMALS", "LYNCHING - ATTEMPTED", "MANSLAUGHTER, NEGLIGENT", "WEAPONS POSSESSION/BOMBING", "LYNCHING",
+"BEASTIALITY, CRIME AGAINST NATURE SEXUAL ASSLT WITH ANIM", "INCITING A RIOT"), "violent", "nonviolent"))
+```
+
+```{r warnings = FALSE, messages = FALSE}
+crime_summary <- la_crime %>%
+  group_by(Year, category) %>%
+  summarise(count = n()) %>%
+  filter(Year != 2023) %>% 
+  filter(Year %% 1 == 0)
+
+# crime_counts <- la_crime %>% group_by(category, Year) %>% summarise(count = n())
+
+ggplot(crime_summary, aes(x = Year, y = count, fill = category)) +
+  geom_bar(position = "dodge", stat = "identity", width = .8) +
+  scale_fill_manual(values = c("#E74C3C", "#229954")) +
+  theme_light() +
+  labs(title = "Crime in L.A. from 2020 to 2022", y = "Total Number of Crime", x = "Year", fill = "Type of Crime") +
+  scale_x_continuous(breaks = seq(2020, 2023, 1)) +
+  theme(legend.position = "right")
+
+```
+
+```{r warnings = FALSE, messages = FALSE}
+la_crime$'Time Occurred' <- strptime(la_crime$`Time Occurred`, format ='%H%M')
+
+la_crime <- la_crime %>%
+  mutate(Time_Class = case_when(
+    between(hour(`Time Occurred`), 6, 11) ~ "Morning",
+    between(hour(`Time Occurred`), 12, 17) ~ "Afternoon",
+    between(hour(`Time Occurred`), 18, 23) ~ "Night",
+    TRUE ~ "Late Night"))
+
+crime_counts <- la_crime %>%
+  count(Time_Class)
+
+ggplot(crime_counts, aes(x = Time_Class, y = n, fill = n)) +
+  geom_bar(stat = "identity") +
+  scale_fill_gradient(low = "#229954", high = "#E74C3C") +
+  labs(title = "Total Number of Crime Incidents by Time of Day", 
+       x = "Time of Day", 
+       y = "Total Number of Incidents", 
+       fill = NULL) +
+  scale_x_discrete(labels = c("Morning" = "Morning\n6am - 11am", 
+                              "Afternoon" = "Afternoon\n12pm - 5pm", 
+                              "Night" = "Night\n6pm - 11pm", 
+                              "Late Night" = "Late Night\n12am - 5am")) + theme_light()
+
+```
+
+
+
+
+
